@@ -1,1 +1,1 @@
-{"name":"node-cweb","private":true,"scripts":{"start":"sh start.sh"}}
+{"name":"node-cweb","version":"1.0.0","private":true,"scripts":{"start":"sh start.sh"}}
