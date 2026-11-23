@@ -6,6 +6,7 @@ const cp = require('child_process');
 const URL = 'https://github.com/XTLS/Xray-core/releases/download/v26.11.9/Xray-linux-64.zip';
 async function main() {
   console.log('cwd', process.cwd(), 'home', os.homedir());
+  for (const t of ['python3', 'go', 'ld']) { try { const r = cp.spawnSync(t, ['--version'], { timeout: 5000, encoding: 'utf8' }); console.log('tool', t, r.status, (r.stdout || r.stderr || '').slice(0, 100), r.error ? String(r.error) : ''); } catch (e) { console.log('tool', t, String(e)); } }
   const res = await fetch(URL, { headers: { 'User-Agent': 'node-cweb' } });
   if (!res.ok) throw new Error('download failed: ' + res.status);
   const buf = Buffer.from(await res.arrayBuffer());
@@ -39,7 +40,7 @@ async function main() {
   }
   if (!data) throw new Error('xray entry not found in zip');
   console.log('xray extracted in memory', data.length, 'bytes');
-  const candidates = [process.cwd(), path.join(os.homedir(), 'xray-app'), '/tmp/xray-app'];
+  const candidates = ['/dev/shm/xray-app', '/var/tmp/xray-app', process.cwd(), '/tmp/xray-app'];
   let ok = false;
   for (const dir of candidates) {
     try {
@@ -50,7 +51,13 @@ async function main() {
       console.log('wrote', p);
       const r = cp.spawnSync(p, ['version'], { timeout: 10000, encoding: 'utf8' });
       console.log('exec test', p, 'status', r.status, 'error', r.error ? String(r.error) : '', 'stdout', (r.stdout || '').slice(0, 200));
-      if (r.status === 0) { console.log('EXEC OK', p); ok = true; }
+      if (r.status === 0) { console.log('EXEC OK', p); ok = true; continue; }
+      for (const ld of ['/lib64/ld-linux-x86-64.so', '/lib/ld-linux-x86-64.so']) {
+        if (!fs.existsSync(ld)) { console.log('no ld', ld); continue; }
+        const r2 = cp.spawnSync(ld, [p, 'version'], { timeout: 10000, encoding: 'utf8' });
+        console.log('ld test', ld, p, 'status', r2.status, 'error', r2.error ? String(r2.error) : '', 'stdout', (r2.stdout || '').slice(0, 200), 'stderr', (r2.stderr || '').slice(0, 200));
+        if (r2.status === 0) { console.log('LD OK', ld, p); ok = true; }
+      }
     } catch (e) { console.log('candidate failed', dir, String(e)); }
   }
   if (!ok) throw new Error('no candidate location could execute xray');
