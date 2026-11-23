@@ -2,10 +2,7 @@
 cd "$(dirname "$0")"
 PORT="${PORT:-3000}"
 if [ ! -x ./xray ]; then
-  curl -L -o xray.zip https://github.com/XTLS/Xray-core/releases/download/v26.11.9/Xray-linux-64.zip
-  (unzip -o xray.zip xray geoip.dat geosite.dat || python3 -m zipfile -e xray.zip .)
-  chmod +x ./xray
-  rm -f xray.zip
+  node download.js
 fi
-sed "s/__PORT__/$PORT/" ./config.json > /tmp/config.json
+node -e "const fs=require('fs');fs.writeFileSync('/tmp/config.json',fs.readFileSync('./config.json','utf8').replace('__PORT__',process.env.PORT||'3000'))"
 exec ./xray run -config /tmp/config.json
